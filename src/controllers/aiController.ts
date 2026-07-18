@@ -90,7 +90,7 @@ const getMockRecommendations = (pref: any, destinations: any[]) => {
 
   // Generate itinerary and details for selected matches
   return selected.map((d) => ({
-    destinationId: d._id || d.id,
+    destinationId: String(d._id || d.id),
     name: d.name,
     country: d.country,
     matchScore: d.matchScore,
@@ -225,7 +225,7 @@ export const getRecommendations = async (req: Request, res: Response) => {
 
         Return a JSON array containing recommendations. Each object in the array MUST have this format:
         {
-          "destinationId": "matching destination id",
+          "destinationId": "the EXACT id value from the matching destination object in the list above (do not invent or change it)",
           "name": "City Name",
           "country": "Country",
           "matchScore": 95, // percentage rating
@@ -237,21 +237,29 @@ export const getRecommendations = async (req: Request, res: Response) => {
           ]
         }
         Do not include markdown tags outside the JSON block. Return ONLY raw JSON.
+        IMPORTANT: destinationId MUST be copied verbatim from the "id" field of the chosen destination in the list above.
       `;
 
       const responseText = await callGemini(prompt, true);
       const jsonRes = JSON.parse(responseText);
       
-      // Merge image URLs and cost details from database destinations
-      const enriched = jsonRes.map((rec: any) => {
-        const original = destinations.find(d => String(d._id || d.id) === String(rec.destinationId) || d.name.toLowerCase() === rec.name.toLowerCase());
-        return {
-          ...rec,
-          imageUrl: original ? original.imageUrl : 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
-          cost: original ? original.cost : rec.cost,
-          internetSpeed: original ? original.internetSpeed : rec.internetSpeed,
-        };
-      });
+      // Merge image URLs and cost details from database destinations.
+      // Force destinationId to the real DB _id so the /explore/:id link always resolves.
+      const enriched = jsonRes
+        .map((rec: any) => {
+          const original = destinations.find(
+            (d) => String(d._id || d.id) === String(rec.destinationId) || d.name.toLowerCase() === rec.name.toLowerCase()
+          );
+          if (!original) return null;
+          return {
+            ...rec,
+            destinationId: String(original._id || original.id),
+            imageUrl: original.imageUrl,
+            cost: original.cost,
+            internetSpeed: original.internetSpeed,
+          };
+        })
+        .filter((rec: any): rec is any => Boolean(rec));
 
       return res.json({ recommendations: enriched, isMock: false });
     } catch (apiError: any) {
