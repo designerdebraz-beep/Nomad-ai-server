@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getProfile = exports.googleLogin = exports.login = exports.register = void 0;
+exports.getProfile = exports.googleLogin = exports.seedDemoUser = exports.DEMO_PASSWORD = exports.DEMO_EMAIL = exports.login = exports.register = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
@@ -116,6 +116,47 @@ const login = async (req, res) => {
     }
 };
 exports.login = login;
+exports.DEMO_EMAIL = 'john.nomad@nomadai.io';
+exports.DEMO_PASSWORD = 'Password123!';
+const seedDemoUser = async () => {
+    try {
+        if ((0, db_1.isJsonDbActive)()) {
+            const db = (0, db_1.readJsonDb)();
+            if (!db.users.find((u) => u.email === exports.DEMO_EMAIL)) {
+                const hashedPassword = await bcryptjs_1.default.hash(exports.DEMO_PASSWORD, 10);
+                db.users.push({
+                    _id: 'seed_user_demo',
+                    username: 'JohnNomad',
+                    email: exports.DEMO_EMAIL,
+                    password: hashedPassword,
+                    avatar: `https://api.dicebear.com/7.x/adventurer/svg?seed=JohnNomad`,
+                    savedDestinations: [],
+                    createdAt: new Date(),
+                });
+                (0, db_1.writeJsonDb)(db);
+                console.log('Demo user seeded (JSON DB).');
+            }
+        }
+        else {
+            const existing = await User_1.UserModel.findOne({ email: exports.DEMO_EMAIL });
+            if (!existing) {
+                const demoUser = new User_1.UserModel({
+                    username: 'JohnNomad',
+                    email: exports.DEMO_EMAIL,
+                    password: await bcryptjs_1.default.hash(exports.DEMO_PASSWORD, 10),
+                    avatar: `https://api.dicebear.com/7.x/adventurer/svg?seed=JohnNomad`,
+                    savedDestinations: [],
+                });
+                await demoUser.save();
+                console.log('Demo user seeded (MongoDB).');
+            }
+        }
+    }
+    catch (error) {
+        console.error('Demo user seeding error:', error);
+    }
+};
+exports.seedDemoUser = seedDemoUser;
 const googleLogin = async (req, res) => {
     try {
         const { email, username, googleId } = req.body;

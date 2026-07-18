@@ -11,6 +11,7 @@ const Destination_1 = require("./models/Destination");
 const auth_1 = __importDefault(require("./routes/auth"));
 const destinations_1 = __importDefault(require("./routes/destinations"));
 const ai_1 = __importDefault(require("./routes/ai"));
+const authController_1 = require("./controllers/authController");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
@@ -177,6 +178,7 @@ const seedDatabase = async () => {
                 console.log('MongoDB Seeding Completed.');
             }
         }
+        await (0, authController_1.seedDemoUser)();
     }
     catch (error) {
         console.error('Seeding error:', error);
