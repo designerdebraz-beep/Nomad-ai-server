@@ -3,5 +3,5 @@ node_modules
 dist
 uploads
 *.log
-
+GEMINI_API_KEY
 .vercel
