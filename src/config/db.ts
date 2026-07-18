@@ -32,6 +32,18 @@ export const connectDB = async () => {
     useJsonDb = false;
   } catch (error: any) {
     console.error(`MongoDB connection error: ${error.message}`);
+
+    // In production / serverless (e.g. Vercel), the filesystem is read-only,
+    // so the JSON file fallback cannot persist data. Fail fast instead of
+    // silently degrading to a store that will crash on the first write.
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      console.error(
+        'Refusing to fall back to the local JSON database in production. ' +
+        'Set a valid MONGODB_URI environment variable.'
+      );
+      throw error;
+    }
+
     console.log('⚠️ Falling back to Local JSON File Database (db.json)...');
     useJsonDb = true;
     ensureJsonDbExists();

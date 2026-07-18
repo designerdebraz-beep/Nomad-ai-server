@@ -23,6 +23,34 @@ app.use((req, res, next) => {
   next();
 });
 
+// Lazy DB init: ensures the DB is connected and seeded exactly once,
+// which is required for serverless (Vercel) where there is no persistent server.
+let dbInitPromise: Promise<void> | null = null;
+export const ensureDbReady = async () => {
+  if (!dbInitPromise) {
+    dbInitPromise = (async () => {
+      await connectDB();
+      await seedDatabase();
+    })().catch((err) => {
+      // Reset so a later request can retry after a transient failure.
+      dbInitPromise = null;
+      throw err;
+    });
+  }
+  return dbInitPromise;
+};
+
+// Initialize the DB before handling any request (works in both local and serverless).
+app.use(async (req, res, next) => {
+  try {
+    await ensureDbReady();
+    next();
+  } catch (err) {
+    console.error('Database initialization failed:', err);
+    res.status(500).json({ message: 'Database initialization failed' });
+  }
+});
+
 // Seed Data
 const seedDestinations = [
   {
@@ -156,7 +184,7 @@ const seedDestinations = [
   }
 ];
 
-const     seedDatabase = async () => {
+export const seedDatabase = async () => {
   try {
     if (isJsonDbActive()) {
       const db = readJsonDb();
@@ -199,9 +227,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Start Server
-app.listen(PORT, async () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  await connectDB();
-  await seedDatabase();
-});
+// Start a traditional server only when NOT running on Vercel (i.e. local dev).
+if (!process.env.VERCEL) {
+  app.listen(PORT, async () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    await ensureDbReady();
+  });
+}
+
+export default app;

@@ -2,11 +2,12 @@
   "name": "nomad-ai-backend",
   "version": "1.0.0",
   "description": "NomadAI Backend Express Server",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js"
+    "build": "node ./node_modules/typescript/bin/tsc",
+    "vercel-build": "node ./node_modules/typescript/bin/tsc",
+    "start": "node dist/src/index.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
