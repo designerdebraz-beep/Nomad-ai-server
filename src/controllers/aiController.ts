@@ -7,7 +7,7 @@ const getAllDestinationsContext = async (): Promise<any[]> => {
   if (isJsonDbActive()) {
     return readJsonDb().destinations;
   } else {
-    return await DestinationModel.find({});
+    return await DestinationModel.find({}).lean();
   }
 };
 
